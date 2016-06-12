@@ -1,7 +1,6 @@
 package com.csclab.hc.socketsample;
 
 import android.app.Activity;
-import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -10,15 +9,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.google.android.gms.appindexing.Action;
-import com.google.android.gms.appindexing.AppIndex;
-import com.google.android.gms.common.api.GoogleApiClient;
-
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 
-public class MainActivity extends Activity implements View.OnClickListener {
+public class MainActivity extends Activity implements android.view.View.OnClickListener {
     /**
      * Init Variable for IP page
      **/
@@ -29,26 +24,26 @@ public class MainActivity extends Activity implements View.OnClickListener {
     /**
      * Init Variable for Page 1
      **/
+    EditText inputNumTxt1;
+    EditText inputNumTxt2;
     Button btnAdd;
     Button btnSub;
     Button btnMul;
     Button btnDiv;
 
-    EditText inputNumTxt1;
-    EditText inputNumTxt2;
-
-    /** Init Variable for Page 2 **/
+    /**
+     * Init Variable for Page 2
+     **/
     TextView textResult;
-
     Button return_button;
 
-    /** Init Variable **/
-    String oper = "";
     /**
-     * ATTENTION: This was auto-generated to implement the App Indexing API.
-     * See https://g.co/AppIndexing/AndroidStudio for more information.
-     */
-    private GoogleApiClient client;
+     * Init Variable
+     **/
+    String oper = "";
+    thread connection;
+    public PrintWriter write;
+    public Socket socket;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,11 +52,15 @@ public class MainActivity extends Activity implements View.OnClickListener {
         inputIP = (EditText) findViewById(R.id.edIP);
         ipSend = (Button) findViewById(R.id.ipButton);
 
-        ipSend.setOnClickListener(new Button.OnClickListener(){
-            public void onClick(View view){
+        ipSend.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View view) {
                 /** Func() for setup page 1 **/
                 ipAdd = inputIP.getText().toString();
                 jumpToMainLayout();
+
+                connection = new thread();
+                connection.start();
             }
         });
     }
@@ -130,43 +129,21 @@ public class MainActivity extends Activity implements View.OnClickListener {
         // HINT:Using log.d to check your answer is correct before implement page turning
         Log.d("The result from APP is",num1 + oper +num2 + "=" + result);
         //TODO: Pass the result String to jumpToResultLayout() and show the result at Result view
+        sendMessage(new String(num1 + " " + oper + " " + num2 + " = " + result));
         jumpToResultLayout(new String(num1 + " " + oper + " " + num2 + " = " + result));
     }
-    /*
-    @Override
-    public void onStart() {
-        super.onStart();
 
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        client.connect();
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app URL is correct.
-                Uri.parse("android-app://com.csclab.hc.socketsample/http/host/path")
-        );
-        AppIndex.AppIndexApi.start(client, viewAction);
-    }
-    */
-    /** Function for page 2 (result page) setup */
-    public void jumpToResultLayout(String resultStr){
+    public void jumpToResultLayout(String resultStr) {
         setContentView(R.layout.result_page);
 
         //TODO: Bind return_button and textResult form result view
         // HINT: findViewById()
-        // HINT: Remember to change type
+        // HINT: Remember to give type
         return_button = (Button) findViewById(R.id.return_button);
         textResult = (TextView) findViewById(R.id.textResult);
 
         if (textResult != null) {
             //TODO: Set the result text
-            thread th = new thread(resultStr) ;
-            th.start() ;
             textResult.setText(resultStr);
         }
 
@@ -178,49 +155,47 @@ public class MainActivity extends Activity implements View.OnClickListener {
             //          // Something to do..
             //      }
             // }
-            return_button.setOnClickListener(new View.OnClickListener(){
+            return_button.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
+                    // TODO
                     jumpToMainLayout();
                 }
+
             });
         }
     }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
-        // See https://g.co/AppIndexing/AndroidStudio for more information.
-        Action viewAction = Action.newAction(
-                Action.TYPE_VIEW, // TODO: choose an action type.
-                "Main Page", // TODO: Define a title for the content shown.
-                // TODO: If you have web page content that matches this app activity's content,
-                // make sure this auto-generated web page URL is correct.
-                // Otherwise, set the URL to null.
-                Uri.parse("http://host/path"),
-                // TODO: Make sure this auto-generated app URL is correct.
-                Uri.parse("android-app://com.csclab.hc.socketsample/http/host/path")
-        );
-        AppIndex.AppIndexApi.end(client, viewAction);
-        client.disconnect();
-    }
-
-    class thread extends Thread{
-        private String stringToSend;
-        thread(String input) {
-            stringToSend = input;
+    public void sendMessage(String message)
+    {
+        try{
+            write.println(message);
+            write.flush();
         }
-        public void run(){
-            try{
+        catch(Exception e){
+
+        }
+    }
+    class thread extends Thread {
+
+        public void run() {
+            try {
+                System.out.println("Client: Waiting to connect...");
                 int serverPort = 2000;
-                Socket socket = new Socket(ipAdd, serverPort);
-                PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
-                writer.println(stringToSend);
-                writer.flush();
-            }catch (Exception e){
+
+                // Create socket connect server
+                socket = new Socket(ipAdd, serverPort);
+                System.out.println("Connected!");
+
+                // Create stream communicate with server
+                write = new PrintWriter(new OutputStreamWriter(socket.getOutputStream()));
+                String strToSend = "Hi I'm client";
+                write.println(strToSend);
+                write.flush();
+
+            } catch (Exception e) {
                 System.out.println("Error" + e.getMessage());
             }
         }
+
+
     }
 }
