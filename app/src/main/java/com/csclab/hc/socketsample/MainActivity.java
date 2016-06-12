@@ -181,6 +181,7 @@ public class MainActivity extends Activity implements android.view.View.OnClickL
                 System.out.println("Client: Waiting to connect...");
                 int serverPort = 2000;
 
+
                 // Create socket connect server
                 socket = new Socket(ipAdd, serverPort);
                 System.out.println("Connected!");
